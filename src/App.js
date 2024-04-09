@@ -1,13 +1,9 @@
 import React, { Component } from 'react';
-import fetch from 'isomorphic-fetch';
 import styled from 'styled-components';
 import { connect } from 'react-redux';
 import { summaryDonations } from './helpers';
-
-const Card = styled.div`
-  margin: 10px;
-  border: 1px solid #ccc;
-`;
+import Card from './components/Card';
+import { getCharities, getPayments } from './api';
 
 export default connect((state) => state)(
   class App extends Component {
@@ -18,60 +14,19 @@ export default connect((state) => state)(
 
     componentDidMount() {
       const self = this;
-      fetch('http://localhost:3001/charities')
-        .then(function (resp) {
-          return resp.json();
-        })
-        .then(function (data) {
-          self.setState({ charities: data });
-        });
+      getCharities().then(function (data) {
+        self.setState({ charities: data });
+      });
 
-      fetch('http://localhost:3001/payments')
-        .then(function (resp) {
-          return resp.json();
-        })
-        .then(function (data) {
-          self.props.dispatch({
-            type: 'UPDATE_TOTAL_DONATE',
-            amount: summaryDonations(data.map((item) => item.amount)),
-          });
+      getPayments().then(function (data) {
+        self.props.dispatch({
+          type: 'UPDATE_TOTAL_DONATE',
+          amount: summaryDonations(data.map((item) => item.amount)),
         });
+      });
     }
 
     render() {
-      const self = this;
-      const cards = this.state.charities.map(function (item, i) {
-        const payments = [10, 20, 50, 100, 500].map((amount, j) => (
-          <label key={j}>
-            <input
-              type="radio"
-              name="payment"
-              onClick={function () {
-                self.setState({ selectedAmount: amount });
-              }}
-            />
-            {amount}
-          </label>
-        ));
-
-        return (
-          <Card key={i}>
-            <p>{item.name}</p>
-            {payments}
-            <button
-              onClick={handlePay.call(
-                self,
-                item.id,
-                self.state.selectedAmount,
-                item.currency
-              )}
-            >
-              Pay
-            </button>
-          </Card>
-        );
-      });
-
       const style = {
         color: 'red',
         margin: '1em 0',
@@ -83,29 +38,36 @@ export default connect((state) => state)(
       const donate = this.props.donate;
       const message = this.props.message;
 
+      const CardList = styled.div`
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 30px;
+
+        @media (max-width: 640px) {
+          grid-template-columns: 1fr;
+        }
+      `;
+
+      const cardList = this.state.charities.map((item, i) => (
+        <Card key={i} item={item} />
+      ));
+
       return (
-        <div>
-          <h1>Tamboon React</h1>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <h1 style={{ color: '#666F84', fontWeight: 'bold' }}>
+            Omise Tamboon React
+          </h1>
           <p>All donations: {donate}</p>
           <p style={style}>{message}</p>
-          {cards}
+          <CardList>{cardList}</CardList>
         </div>
       );
     }
   }
 );
-
-/**
- * Handle pay button
- * 
- * @param {*} The charities Id
- * @param {*} amount The amount was selected
- * @param {*} currency The currency
- * 
- * @example
- * fetch('http://localhost:3001/payments', {
-      method: 'POST',
-      body: `{ "charitiesId": ${id}, "amount": ${amount}, "currency": "${currency}" }`,
-    })
- */
-function handlePay(id, amount, currency) {}
